@@ -73,7 +73,7 @@ func (c *Collection) FindByVariable(ctx context.Context, id int, variableName, s
 
 type EmailWithVariables struct {
 	Email     string            `json:"email"`
-	Variables map[string]string `json:"variables"`
+	Variables map[string]string `json:"variables,omitempty"`
 }
 
 type AddEmailsOptions struct {
@@ -101,7 +101,7 @@ func (c *Collection) AddEmailsWithVariables(ctx context.Context, id int, emails 
 		}
 	}
 	var res go_sendpulse.ResultResponse
-	r := c.client.R().SetContext(ctx).SetBody(body).SetResult(&res)
+	r := c.client.R().SetContext(ctx).SetHeader("Content-Type", "application/json").SetBody(body).SetResult(&res)
 	_, err := r.Post(fmt.Sprintf("/addressbooks/%d/emails", id))
 	if err == nil {
 		if !res.Result {

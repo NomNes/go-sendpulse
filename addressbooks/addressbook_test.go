@@ -2,6 +2,9 @@ package addressbooks
 
 import (
 	"context"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"testing"
 
@@ -62,4 +65,32 @@ func TestGetOne(t *testing.T) {
 			assert.Equal(t, ab["name"], item.Name())
 		}
 	}
+}
+
+func TestAddEmails(t *testing.T) {
+	httpmock.ActivateNonDefault(restyClient.GetClient())
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder("POST", "/addressbooks/123/emails", func(req *http.Request) (*http.Response, error) {
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		var v map[string]interface{}
+		err = json.Unmarshal(body, &v)
+		if err != nil {
+			return nil, err
+		}
+		assert.IsType(t, []interface{}{}, v["emails"])
+		emails := v["emails"].([]interface{})
+		assert.Len(t, emails, 1)
+		assert.IsType(t, map[string]interface{}{}, emails[0])
+		email := emails[0].(map[string]interface{})
+		assert.IsType(t, "", email["email"])
+		assert.Equal(t, "test@mail.com", email["email"])
+		return httpmock.NewJsonResponse(200, go_sendpulse.ResultResponse{Result: true})
+	})
+
+	err := collection.AddEmails(ctx, 123, []string{"test@mail.com"}, nil)
+	assert.NoError(t, err)
 }
